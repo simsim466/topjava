@@ -28,6 +28,6 @@ public class UserMeal {
     }
 
     public int getHashDate()    {
-        return dateTime.getDayOfYear() + dateTime.getYear();
+        return dateTime.getDayOfYear() + dateTime.getYear() * 1000;
     }
 }
