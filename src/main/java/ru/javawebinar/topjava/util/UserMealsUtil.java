@@ -33,6 +33,10 @@ public class UserMealsUtil {
 
         List<UserMealWithExcess> mealsToByStreams = filteredByStreams(meals, LocalTime.of(10, 0), LocalTime.of(20, 0), 2000);
         mealsToByStreams.forEach(System.out::println);
+        System.out.println("__________________________________________________________________________________________");
+
+        List<UserMealWithExcess> mealsToByCyclesOptional = filteredByCycleOptional(meals, LocalTime.of(10, 0), LocalTime.of(20, 0), 2000);
+        mealsToByStreams.forEach(System.out::println);
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime,
@@ -77,5 +81,35 @@ public class UserMealsUtil {
 
     private static UserMealWithExcess getMealWithExcess(UserMeal meal, boolean excess) {
         return new UserMealWithExcess(meal.getDateTime(), meal.getDescription(), meal.getCalories(), excess);
+    }
+
+    public static List<UserMealWithExcess> filteredByCycleOptional(List<UserMeal> meals, LocalTime startTime,
+                                                           LocalTime endTime, int caloriesPerDay)   {
+        Map<Integer, Integer> countMealsADay = new HashMap<>();
+        Map<Integer, Integer> countCaloriesADay = new HashMap<>();
+        Map<String, UserMealWithExcess> resultList = new HashMap<>();
+
+        for (UserMeal meal: meals) {
+            if ( TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(), startTime, endTime) ) {
+                int hashDate = meal.getHashDate();
+                countMealsADay.merge(hashDate, 1, (val0, val1) -> val0 + val1);
+                countCaloriesADay.merge(hashDate, meal.getCalories(), (val0, val1) -> val0 + val1);
+                boolean isOverDose = countCaloriesADay.get(hashDate) > 2000;
+                resultList
+                        .put("" + hashDate + countMealsADay.get(hashDate), getMealWithExcess(meal, isOverDose));
+
+                if ( isOverDose )   {
+                    int count = countMealsADay.get(hashDate) - 1;
+                    while ( count > 0 ) {
+                        resultList
+                                .merge("" + hashDate + count, null, (val0, val1) -> val0.changeExcessAndReturn(true));
+
+                        count--;
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(resultList.values());
     }
 }

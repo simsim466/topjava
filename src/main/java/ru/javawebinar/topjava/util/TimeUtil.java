@@ -8,8 +8,4 @@ public class TimeUtil {
         return lt.compareTo(startTime) >= 0 && lt.compareTo(endTime) < 0;
     }
 
-    /*public static boolean isSameDay(LocalDateTime firstTime, LocalDateTime secondTime)  {
-        return firstTime.getDayOfYear() == secondTime.getDayOfYear() &&
-                firstTime.getYear() == secondTime.getYear();
-    }*/
 }
