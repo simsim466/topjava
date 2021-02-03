@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Month;
 import java.util.*;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class UserMealsUtil {
@@ -36,47 +35,38 @@ public class UserMealsUtil {
         System.out.println("__________________________________________________________________________________________");
 
         List<UserMealWithExcess> mealsToByCyclesOptional = filteredByCycleOptional(meals, LocalTime.of(10, 0), LocalTime.of(20, 0), 2000);
-        mealsToByStreams.forEach(System.out::println);
+        mealsToByCyclesOptional.forEach(System.out::println);
     }
 
     public static List<UserMealWithExcess> filteredByCycles(List<UserMeal> meals, LocalTime startTime,
                                                             LocalTime endTime, int caloriesPerDay) {
         Map<Integer, Integer> dailyCounter = new HashMap<>();
-        List<UserMealWithExcess> filteredMealsWithExcess = new ArrayList<>();
         for (UserMeal meal : meals) {
             int hashDate = meal.getHashDate();
-            if (dailyCounter.containsKey(hashDate))
-                dailyCounter.put(hashDate,
-                        dailyCounter.get(hashDate) + meal.getCalories());
-            else dailyCounter.put(hashDate, meal.getCalories());
+            dailyCounter.merge(hashDate, meal.getCalories(), Integer::sum);
         }
 
+        List<UserMealWithExcess> filteredMealsWithExcess = new ArrayList<>();
         for (UserMeal meal : meals) {
-            if ( TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(),
-                    startTime, endTime) )   {
+            if ( TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(), startTime, endTime) )   {
                 int hashDate = meal.getHashDate();
-                boolean excess = false;
-                if (dailyCounter.get(hashDate) > caloriesPerDay)  {
-                    excess = true;//создаем true
-                }
+                boolean excess = dailyCounter.get(hashDate) > caloriesPerDay;
 
                 filteredMealsWithExcess.add(getMealWithExcess(meal, excess));
             }
         }
-
         return filteredMealsWithExcess;
     }
 
     public static List<UserMealWithExcess> filteredByStreams(List<UserMeal> meals, LocalTime startTime,
                                                              LocalTime endTime, int caloriesPerDay) {
         Map<Integer, Integer> dailyCounter = meals.stream()
-                .collect(Collectors.toMap(meal -> meal.getHashDate(),
-                        meal -> meal.getCalories(),
-                        (key1, key2) -> key1 + key2));
+                .collect(Collectors.toMap(UserMeal::getHashDate, UserMeal::getCalories, Integer::sum));
 
-        return meals.stream().filter(meal -> TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(),
-                startTime, endTime)).map(meal -> getMealWithExcess(meal,
-                dailyCounter.get(meal.getHashDate()) > caloriesPerDay)).collect(Collectors.toList());
+        return meals.stream()
+                .filter(meal -> TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(), startTime, endTime))
+                .map(meal -> getMealWithExcess(meal, dailyCounter.get(meal.getHashDate()) > caloriesPerDay))
+                .collect(Collectors.toList());
     }
 
     private static UserMealWithExcess getMealWithExcess(UserMeal meal, boolean excess) {
@@ -85,31 +75,32 @@ public class UserMealsUtil {
 
     public static List<UserMealWithExcess> filteredByCycleOptional(List<UserMeal> meals, LocalTime startTime,
                                                            LocalTime endTime, int caloriesPerDay)   {
-        Map<Integer, Integer> countMealsADay = new HashMap<>();
-        Map<Integer, Integer> countCaloriesADay = new HashMap<>();
-        Map<String, UserMealWithExcess> resultList = new HashMap<>();
+        Map<Integer, Integer> countMealsPerDay = new HashMap<>();
+        Map<Integer, Integer> countCaloriesPerDay = new HashMap<>();
+        Map<String, Integer> matchOfIndexes = new HashMap<>();
+        List<UserMealWithExcess> result = new ArrayList<>();
 
-        for (UserMeal meal: meals) {
-            if ( TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(), startTime, endTime) ) {
+        int count = 0;
+        for ( UserMeal meal : meals )   {
                 int hashDate = meal.getHashDate();
-                countMealsADay.merge(hashDate, 1, (val0, val1) -> val0 + val1);
-                countCaloriesADay.merge(hashDate, meal.getCalories(), (val0, val1) -> val0 + val1);
-                boolean isOverDose = countCaloriesADay.get(hashDate) > 2000;
-                resultList
-                        .put("" + hashDate + countMealsADay.get(hashDate), getMealWithExcess(meal, isOverDose));
+                countMealsPerDay.merge(hashDate, 1, Integer::sum);
+                countCaloriesPerDay.merge(hashDate, meal.getCalories(), Integer::sum);
+                boolean isOverDose = countCaloriesPerDay.get(hashDate) > caloriesPerDay;
+                matchOfIndexes.put("" + hashDate + countMealsPerDay.get(hashDate), count);
+                if ( TimeUtil.isBetweenHalfOpen(meal.getDateTime().toLocalTime(), startTime, endTime) ) {
+                    result.add(getMealWithExcess(meal, isOverDose));
+                    count++;
+                }
 
                 if ( isOverDose )   {
-                    int count = countMealsADay.get(hashDate) - 1;
-                    while ( count > 0 ) {
-                        resultList
-                                .merge("" + hashDate + count, null, (val0, val1) -> val0.changeExcessAndReturn(true));
-
-                        count--;
+                    int index = countMealsPerDay.get(hashDate) - 1;
+                    while ( index > 0 ) {
+                        int value = matchOfIndexes.get("" + hashDate + index);
+                        result.get(value).changeExcessAndReturn(true);
+                        index--;
                     }
                 }
-            }
         }
-
-        return new ArrayList<>(resultList.values());
+        return result;
     }
 }
