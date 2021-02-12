@@ -11,7 +11,7 @@
 <hr>
 
     <h2>Meals</h2>
-    <h3><span style="font-size: 75%"><a href="">Add meal</a></span></h3>
+    <h3><span style="font-size: 75%"><a href="edit_meal">Add meal</a></span></h3>
     <table border="1" cellspacing="0" align="center" cellpadding="10">
         <tr style="height:60px">
             <th>Date</th>

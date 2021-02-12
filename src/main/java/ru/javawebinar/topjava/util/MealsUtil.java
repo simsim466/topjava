@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MealsUtil {
+    private static final int CALORIES_EXCESS = 2000;
+
     private static List<Meal> mealList = Arrays.asList(
             new Meal(LocalDateTime.of(2020, Month.JANUARY, 30, 10, 0), "Завтрак", 500),
             new Meal(LocalDateTime.of(2020, Month.JANUARY, 30, 13, 0), "Обед", 1000),
@@ -54,8 +56,7 @@ public class MealsUtil {
         return new MealTo(meal.getDateTime(), meal.getDescription(), meal.getCalories(), excess);
     }
 
-    public static List<MealTo> getMealList() {
-        return filteredByStreams(mealList, LocalTime.MIN, LocalTime.MAX, 2000);
+    public static List<MealTo> getMealList(LocalTime start, LocalTime end) {
+        return filteredByStreams(mealList, start, end, CALORIES_EXCESS);
     }
-
 }

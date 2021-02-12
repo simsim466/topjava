@@ -1,5 +1,6 @@
 package ru.javawebinar.topjava.web;
 
+import ru.javawebinar.topjava.dao.MealDao;
 import ru.javawebinar.topjava.dao.MealDaoImp;
 import ru.javawebinar.topjava.model.Meal;
 
@@ -17,12 +18,21 @@ public class MealController extends HttpServlet {
     private static String LIST_USER = "/meals.jsp";
     private MealDaoImp dao;
 
+    public MealController() {
+        super();
+        dao = new MealDaoImp();
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String forward="";
         String action = req.getParameter("action");
 
-        if (action.equalsIgnoreCase("delete"))  {
+        if ( action == null )   {
+            forward = "/edit_meal.jsp";
+            req.setAttribute("meals", dao.getAllMeals());
+        }
+        else if (action.equalsIgnoreCase("delete"))  {
             int mealId = Integer.parseInt(req.getParameter("userId"));
             dao.remove(mealId);
             forward = LIST_USER;
@@ -53,12 +63,12 @@ public class MealController extends HttpServlet {
         meal.setDescription(req.getParameter("description"));
         meal.setCalories(Integer.parseInt(req.getParameter("calories")));
 
-        String userid = req.getParameter("userid");
-        if ( userid == null || userid.isEmpty() )   {
+        String userId = req.getParameter("userid");
+        if ( userId == null || userId.isEmpty() )   {
             dao.create(meal);
         }
         else {
-            meal.setId(Integer.parseInt(userid));
+            meal.setId(Integer.parseInt(userId));
             dao.update(meal);
         }
         RequestDispatcher view = req.getRequestDispatcher(LIST_USER);

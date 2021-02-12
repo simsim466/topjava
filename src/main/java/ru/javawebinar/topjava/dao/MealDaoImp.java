@@ -1,16 +1,32 @@
 package ru.javawebinar.topjava.dao;
 
 import ru.javawebinar.topjava.model.Meal;
+import ru.javawebinar.topjava.model.MealTo;
+import ru.javawebinar.topjava.util.MealsUtil;
+import ru.javawebinar.topjava.web.MealServlet;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+/*
+План
+1. изменить MealDaoImp
+    1.1 он должен изменять и пересчитывать mapOfMeals
+    1.2
+ */
 
 public class MealDaoImp implements MealDao  {
-    private final static Map<Integer, Meal> mapOfMeals = new HashMap<>();
+    private final static Map<Integer, MealTo> mapOfMeals = new HashMap<>();
     private final static AtomicInteger id = new AtomicInteger();
+
+    public MealDaoImp() {
+        int count = 0;
+        for ( MealTo meal : MealsUtil.)   {
+            mapOfMeals.put(count++, meal);
+        }
+    }
 
     @Override
     public void create(Meal meal) {
