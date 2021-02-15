@@ -1,7 +1,6 @@
 package ru.javawebinar.topjava.util;
 
 import ru.javawebinar.topjava.model.Meal;
-import ru.javawebinar.topjava.repository.inmemory.InMemoryMealRepository;
 import ru.javawebinar.topjava.to.MealTo;
 
 import java.time.LocalDate;
@@ -12,7 +11,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -53,7 +51,7 @@ public class MealsUtil {
     public static MealTo convertToTO(Collection<Meal> meals, Meal meal, int caloriesPerDay) {
         int caloriesThatDay = meals.stream()
                 .filter(x -> x.getDate().equals(meal.getDate()))
-                .mapToInt(x -> x.getCalories())
+                .mapToInt(Meal::getCalories)
                 .sum();
 
         return createTo(meal, caloriesThatDay > caloriesPerDay);
@@ -62,8 +60,4 @@ public class MealsUtil {
     private static MealTo createTo(Meal meal, boolean excess) {
         return new MealTo(meal.getId(), meal.getDateTime(), meal.getDescription(), meal.getCalories(), excess);
     }
-
-    public static void main(String[] args) {
-        System.out.println(InMemoryMealRepository.deleteExp(3, 2));
-    } //удалить перед итоговым коммитом
 }

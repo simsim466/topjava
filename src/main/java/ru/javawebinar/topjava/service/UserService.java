@@ -3,7 +3,6 @@ package ru.javawebinar.topjava.service;
 import org.springframework.stereotype.Service;
 import ru.javawebinar.topjava.model.User;
 import ru.javawebinar.topjava.repository.UserRepository;
-import ru.javawebinar.topjava.repository.inmemory.InMemoryUserRepository;
 
 import java.util.List;
 
