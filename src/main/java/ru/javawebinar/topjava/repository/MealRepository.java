@@ -20,6 +20,4 @@ public interface MealRepository {
     Collection<Meal> getAll(int userId);
 
     Collection<Meal> getFilteredByTime(int userId, LocalTime startTime, LocalDate startDate, LocalTime endTime, LocalDate endDate);
-
-    Meal loadUtil(Meal meal);
 }

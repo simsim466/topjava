@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.util.Collection;
 
 import static ru.javawebinar.topjava.util.ValidationUtil.checkNotFound;
+
 @Service
 public class MealService {
     private final MealRepository repository;
@@ -18,7 +19,7 @@ public class MealService {
     }
 
     public Meal create(Meal meal, int userId)   {
-        return checkNotFound(repository.save(meal, userId), String.format("userId %d.", userId));
+        return repository.save(meal, userId);
     }
 
     public void delete(int id, int userId)  {

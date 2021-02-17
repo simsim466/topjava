@@ -2,7 +2,6 @@ package ru.javawebinar.topjava.repository.inmemory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.repository.MealRepository;
@@ -13,84 +12,84 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static ru.javawebinar.topjava.util.DateTimeUtil.isBetweenHalfOpen;
+
+/*
+5.потестируй работу метода с фильтрацией (пока в SpringMain) на данных из MealsUtil.
+а) конечная дата должна попадать в отбор (т.е. по дате фильтр "включая", см.демо)
+б) попробуй отфильтровать с 31.01.2020 00:00 - 31.01.2020 23:00 и  с 31.01.2020 10:00 - 31.01.2020 11:00. Проследи за excess в еде за 31.01.2020 10:00. То, что юзер переел за день никак не должно зависеть от установленного фильтра по времени.
+ */
 @Repository
 public class InMemoryMealRepository implements MealRepository {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryUserRepository.class);
-    private final static Map<Integer, Meal> repository = new ConcurrentHashMap<>();
-    private final static AtomicInteger counter = new AtomicInteger(0);
+    private static final Logger log = LoggerFactory.getLogger(InMemoryMealRepository.class);
+    private final Map<Integer, Map<Integer, Meal>> repoAdvanced = new ConcurrentHashMap<>();
+    private final AtomicInteger counter = new AtomicInteger(0);
 
     {
-        MealsUtil.meals.forEach(this::loadUtil);
+        MealsUtil.meals.forEach(meal -> save(meal, 1));
     }
 
     @Override
-    public Meal save(Meal meal, int userId) {
+    public synchronized Meal save(Meal meal, int userId) {
         log.info("saveMeal for user {}", userId);
-        if ( meal.isNew() ) {
+        if (meal.isNew()) {
             meal.setId(counter.incrementAndGet());
-            meal.setUserId(userId);
-            repository.put(meal.getId(), meal);
-            return meal;
         }
-        else if ( meal.getUserId() == userId )  {
-            return repository.computeIfPresent(meal.getId(), (id, oldMeal) -> meal);
+
+        Map<Integer, Meal> map = repoAdvanced.get(userId);
+        if (map != null) {
+            map.put(meal.getId(), meal);
+            repoAdvanced.put(userId, map);
+            return meal;
         }
 
         return null;
     }
 
     @Override
-    public Meal loadUtil(Meal meal) {
-        if (meal.isNew()) {
-            meal.setId(counter.incrementAndGet());
-            repository.put(meal.getId(), meal);
-            return meal;
-        }
-
-        return repository.computeIfPresent(meal.getId(), (id, oldMeal) -> meal);
-    }
-
-    @Override
-    public boolean delete(int id, int userId) {
-        log.info("deleteMeal with id {} for user {}",id, userId);
-        Meal meal = repository.get(id);
-        if ( meal != null && !meal.isNew() && meal.getUserId() == userId )   {
-            return repository.remove(id) != null;
+    public synchronized boolean delete(int id, int userId) {
+        log.info("deleteMeal with id {} for user {}", id, userId);
+        Map<Integer, Meal> map = repoAdvanced.get(userId);
+        if (map != null) {
+            Meal meal = map.get(id);
+            if (meal != null) {
+                map.remove(id);
+                repoAdvanced.put(userId, map);
+                return true;
+            }
         }
 
         return false;
     }
 
     @Override
-    public Meal get(int id, int userId) {
-        log.info("getMeal with id {} for user {}",id, userId);
-        Meal meal = repository.get(id);
-        if ( meal != null && !meal.isNew()
-                && userId == meal.getUserId())  {
-            return meal;
-        }
-
-        return null;
+    public synchronized Meal get(int id, int userId) {
+        log.info("getMeal with id {} for user {}", id, userId);
+        return repoAdvanced.get(userId).get(id);
     }
 
     @Override
-    public Collection<Meal> getAll(int userId) {
+    public synchronized Collection<Meal> getAll(int userId) {
         log.info("getAll for user {}", userId);
-        return repository.values().stream()
-                .filter(x -> x.getUserId() != null && x.getUserId() == userId)
-                .sorted((o1, o2) -> o1.getDateTime().isAfter(o2.getDateTime()) ? 1 : o1.getDateTime().isBefore(o2.getDateTime()) ? -1 : 0)
-                .collect(Collectors.toList());
+        return getFiltered(userId, meal -> true);
     }
 
     @Override
-    public Collection<Meal> getFilteredByTime(int userId, LocalTime startTime, LocalDate startDate, LocalTime endTime, LocalDate endDate) {
+    public synchronized Collection<Meal> getFilteredByTime(int userId, LocalTime startTime, LocalDate startDate, LocalTime endTime, LocalDate endDate) {
         log.info("getFilteredByTime for user {}", userId);
-        return getAll(userId).stream()
-                .filter(x -> isBetweenHalfOpen(x.getTime(), startTime, endTime) &&
-                        isBetweenHalfOpen(x.getDate(), startDate, endDate))
+        return getFiltered(userId, x -> isBetweenHalfOpen(x.getTime(), startTime, endTime) &&
+                isBetweenHalfOpen(x.getDate(), startDate, endDate));
+    }
+
+    private Collection<Meal> getFiltered(int userId, Predicate<Meal> filter) {
+        return repoAdvanced.get(userId)
+                .values()
+                .stream()
+                .filter(filter)
+                .sorted((m1, m2) -> m2.getDateTime().compareTo(m1.getDateTime()))
                 .collect(Collectors.toList());
     }
 }
