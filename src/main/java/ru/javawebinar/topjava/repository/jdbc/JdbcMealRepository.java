@@ -9,10 +9,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 import ru.javawebinar.topjava.model.Meal;
-import ru.javawebinar.topjava.model.User;
 import ru.javawebinar.topjava.repository.MealRepository;
 
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -52,8 +50,8 @@ public class JdbcMealRepository implements MealRepository {
             meal.setId(newKey.intValue());
         }
         else if (namedParameterJdbcTemplate.update(
-                "UPDATE meals SET datetime=:datetime, description=:description, " +
-                        "calories=:calories WHERE user_id=:user_id AND meal_id=:meal_id", map) == 0)    {
+                "UPDATE meals SET date_time=:datetime, description=:description, " +
+                        "calories=:calories WHERE user_id=:user_id AND id=:meal_id", map) == 0)    {
             return null;
         }
         return meal;
@@ -67,19 +65,19 @@ public class JdbcMealRepository implements MealRepository {
     @Override
     public Meal get(int id, int userId) {
         List<Meal> list = jdbcTemplate
-                .query("SELECT * FROM meals WHERE user_id=? AND meal_id=?", ROW_MAPPER, userId, id);
+                .query("SELECT * FROM meals WHERE user_id=? AND id=?", ROW_MAPPER, userId, id);
         return DataAccessUtils.singleResult(list);
     }
 
     @Override
     public List<Meal> getAll(int userId) {
-        return jdbcTemplate.query("SELECT * FROM meals WHERE user_id=? ORDER BY datetime", ROW_MAPPER, userId);
+        return jdbcTemplate.query("SELECT * FROM meals WHERE user_id=? ORDER BY date_time DESC ", ROW_MAPPER, userId);
     }
 
     @Override
     public List<Meal> getBetweenHalfOpen(LocalDateTime startDateTime, LocalDateTime endDateTime, int userId) {
         return jdbcTemplate
-                .query("SELECT * FROM meals WHERE user_id=? AND datetime>=? AND datetime<? ORDER BY datetime",
-                        ROW_MAPPER, userId, Timestamp.valueOf(startDateTime), Timestamp.valueOf(endDateTime));
+                .query("SELECT * FROM meals WHERE user_id=? AND date_time>=? AND date_time<? ORDER BY date_time DESC",
+                        ROW_MAPPER, userId, startDateTime, endDateTime);
     }
 }
