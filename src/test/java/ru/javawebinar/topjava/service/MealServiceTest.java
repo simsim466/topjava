@@ -1,7 +1,12 @@
 package ru.javawebinar.topjava.service;
 
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExternalResource;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.ContextConfiguration;
@@ -12,6 +17,7 @@ import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.util.exception.NotFoundException;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Month;
 
 import static org.junit.Assert.assertThrows;
@@ -26,9 +32,43 @@ import static ru.javawebinar.topjava.UserTestData.USER_ID;
 @RunWith(SpringRunner.class)
 @Sql(scripts = "classpath:db/populateDB.sql", config = @SqlConfig(encoding = "UTF-8"))
 public class MealServiceTest {
+    private final static Logger log = LoggerFactory.getLogger(MealServiceTest.class);
+    private static LocalTime testStart;
+    private static LocalTime classStart;
+    private static final String className = MealServiceTest.class.getName();
 
     @Autowired
     private MealService service;
+
+    @Rule
+    public ExternalResource testDuration = new ExternalResource() {
+        @Override
+        protected void before() {
+            testStart = LocalTime.now();
+        }
+
+        @Override
+        protected void after() {
+            LocalTime end = LocalTime.now();
+            long nanos = end.toNanoOfDay() - testStart.toNanoOfDay();
+            log.info("Время проведения теста составило {} мс", nanos /1000000);
+        }
+    };
+
+    @ClassRule
+    public static ExternalResource classTestDuration = new ExternalResource() {
+        @Override
+        protected void before() {
+            classStart = LocalTime.now();
+        }
+
+        @Override
+        protected void after() {
+            LocalTime end = LocalTime.now();
+            long nanos = end.toNanoOfDay() - classStart.toNanoOfDay();
+            log.info("Время проведения всех тестов класса {} составило {} мс", className, nanos /1000000);
+        }
+    };
 
     @Test
     public void delete() {
